@@ -5,16 +5,19 @@ import sys
 import time
 
 from tensorboardX import SummaryWriter
-
+import logging
 import torch
 import utils
 from coco_eval import CocoEvaluator
 from coco_utils import get_coco_api_from_dataset
 from imports import *
 
+from transforms import DomainTransfer
+from torchvision.utils import save_image
+
 writer = SummaryWriter()
 num_iters = 0
-
+DT_model = DomainTransfer()
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
     global num_iters
@@ -30,17 +33,32 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
 
         lr_scheduler = utils.warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor)
 
-    for images, targets in metric_logger.log_every(data_loader, print_freq, header):
-        images = list(image.to(device) for image in images)
+    for images, targets, scene in metric_logger.log_every(data_loader, print_freq, header):
+        
+        images = list((image.to(device) for image in images))
+        
+    
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+        
+        
 
         loss_dict = model(images, targets)
+        
         num_iters += 1
         losses = sum(loss for loss in loss_dict.values())
+        
 
         # reduce losses over all GPUs for logging purposes
         loss_dict_reduced = utils.reduce_dict(loss_dict)
+        
         losses_reduced = sum(loss for loss in loss_dict_reduced.values())
+        for time in scene:
+            if time == 'daytime':
+                night_images = list((DT_model(image.unsqueeze(0)).squeeze(0) for image in images))
+                loss_night_dict = model(night_images, targets)
+                losses += sum(loss for loss in loss_night_dict.values())
+                loss_night_dict_reduced = utils.reduce_dict(loss_night_dict)
+                losses_reduced += sum(loss for loss in loss_night_dict_reduced.values())
 
         loss_value = losses_reduced.item()
 
@@ -71,7 +89,79 @@ def _get_iou_types(model):
     iou_types = ["bbox"]
     return iou_types
 
+def do_da_train(
+    model,
+    source_data_loader,
+    target_data_loader,
+    optimizer,
+    scheduler,
+    device,
+    iteration,
+    print_freq=200
+):
+    logger = logging.getLogger("fasterRCNN.trainer")
+    logger.info("Start training")
+    meters = utils.MetricLogger(delimiter=" ")
+    max_iter = len(source_data_loader)
+    start_iter = iteration
+    model.train()
+    start_training_time = time.time()
+    end = time.time()
+    for iteration, ((source_images, source_targets), (target_images, target_targets)) in enumerate(zip(source_data_loader, target_data_loader)):
+        data_time = time.time() - end
 
+        images = (source_images+target_images).to(device)
+        targets = [target.to(device) for target in list(source_targets+target_targets)]
+
+        loss_dict = model(images, targets)
+
+        losses = sum(loss for loss in loss_dict.values())
+
+        # reduce losses over all GPUs for logging purposes
+        loss_dict_reduced = reduce_loss_dict(loss_dict)
+        losses_reduced = sum(loss for loss in loss_dict_reduced.values())
+        meters.update(loss=losses_reduced, **loss_dict_reduced)
+
+        optimizer.zero_grad()
+        losses.backward()
+        optimizer.step()
+        
+        scheduler.step()
+
+        batch_time = time.time() - end
+        end = time.time()
+        meters.update(time=batch_time, data=data_time)
+
+        eta_seconds = meters.time.global_avg * (max_iter - iteration)
+        eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
+
+        if iteration % print_freq == 0 or iteration == max_iter:
+            logger.info(
+                meters.delimiter.join(
+                    [
+                        "eta: {eta}",
+                        "iter: {iter}",
+                        "{meters}",
+                        "lr: {lr:.6f}",
+                        "max mem: {memory:.0f}",
+                    ]
+                ).format(
+                    eta=eta_string,
+                    iter=iteration,
+                    meters=str(meters),
+                    lr=optimizer.param_groups[0]["lr"],
+                    memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
+                )
+            )
+        
+
+    total_training_time = time.time() - start_training_time
+    total_time_str = str(datetime.timedelta(seconds=total_training_time))
+    logger.info(
+        "Total training time: {} ({:.4f} s / it)".format(
+            total_time_str, total_training_time / (max_iter)
+        )
+    )
 @torch.no_grad()
 def evaluate(model, data_loader, device):
     iou_types = ["bbox"]
@@ -86,9 +176,11 @@ def evaluate(model, data_loader, device):
     iou_types = _get_iou_types(model)
     coco_evaluator = CocoEvaluator(coco, iou_types)
     to_tensor = torchvision.transforms.ToTensor()
-    for image, targets in metric_logger.log_every(data_loader, 100, header):
+    for images, targets in metric_logger.log_every(data_loader, 100, header):
 
-        image = list(to_tensor(img).to(device) for img in image)
+        #image = list(to_tensor(img).to(device) for img in image)
+        image = list(image.to(device) for image in images)
+        
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
         torch.cuda.synchronize()
         model_time = time.time()

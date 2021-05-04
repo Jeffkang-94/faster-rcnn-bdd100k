@@ -10,9 +10,11 @@ if ds == "bdd100k":
 
     train_img_path = root_img_path + "/train/"
     val_img_path = root_img_path + "/val/"
+    fake_img_path = root_img_path +"/fake_night_noTV_noRefine/"
 
     train_anno_json = root_anno_path + "/bdd100k_labels_images_train.json"
     val_anno_json = root_anno_path + "/bdd100k_labels_images_val.json"
+     
 
     def _load_json(path_list_idx):
         with open(path_list_idx, "r") as file:
@@ -26,6 +28,12 @@ if ds == "bdd100k":
         img_path = train_img_path + train_anno_data[i]["name"]
         img_datalist.append(img_path)
 
+    fake_img_datalist=[]
+    for i in tqdm(range(len(train_anno_data))):
+        img_path = fake_img_path + train_anno_data[i]["name"]
+        fake_img_datalist.append(img_path)
+
+
     val_anno_data = _load_json(val_anno_json)
 
     val_datalist = []
@@ -34,6 +42,7 @@ if ds == "bdd100k":
         img_path = val_img_path + val_anno_data[i]["name"]
         val_datalist.append(img_path)
 
+    
     try:
         os.mkdir("datalists")
     except:
@@ -41,7 +50,8 @@ if ds == "bdd100k":
 
     with open("datalists/bdd100k_train_images_path.txt", "wb") as fp:
         pickle.dump(img_datalist, fp)
-
+    with open("datalists/bdd100k_train_fake_images_path.txt", "wb") as fp:
+        pickle.dump(fake_img_datalist, fp)
     with open("datalists/bdd100k_val_images_path.txt", "wb") as fp:
         pickle.dump(val_datalist, fp)
 

@@ -1,3 +1,5 @@
 saved_models/*
 __pycache__/*
 datalists/*
+model/*
+runs/*

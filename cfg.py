@@ -2,7 +2,7 @@
 bdd_path = "/mnt2/datasets/bdd100k"
 
 
-batch_size = 64
+batch_size = 4
 
 num_epochs = 25
 lr = 0.001
