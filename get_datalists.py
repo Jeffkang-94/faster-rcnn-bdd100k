@@ -3,6 +3,10 @@ from imports import *
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
+def save_json(obj, f, *args, **kwargs):
+    with open(f, 'w') as fp:
+        json.dump(obj, fp, *args, **kwargs)
+
 if ds == "bdd100k":
     print("Creating datalist for Berkeley Deep Drive")
     root_img_path = os.path.join(bdd_path, "images", "100k")
@@ -10,12 +14,13 @@ if ds == "bdd100k":
 
     train_img_path = root_img_path + "/train/"
     val_img_path = root_img_path + "/val/"
-    fake_img_path = root_img_path +"/fake_night_noTV_noRefine/"
+    fake_img_path = root_img_path +"/baseline/fake_night/"
 
     train_anno_json = root_anno_path + "/bdd100k_labels_images_train.json"
     val_anno_json = root_anno_path + "/bdd100k_labels_images_val.json"
-     
-
+    new_anno_json = root_anno_path + "/bdd100k_labels_images_fake_train.json"
+    
+        
     def _load_json(path_list_idx):
         with open(path_list_idx, "r") as file:
             data = json.load(file)
@@ -24,15 +29,17 @@ if ds == "bdd100k":
     train_anno_data = _load_json(train_anno_json)
 
     img_datalist = []
+    label = []
+   
     for i in tqdm(range(len(train_anno_data))):
         img_path = train_img_path + train_anno_data[i]["name"]
         img_datalist.append(img_path)
-
-    fake_img_datalist=[]
-    for i in tqdm(range(len(train_anno_data))):
-        img_path = fake_img_path + train_anno_data[i]["name"]
-        fake_img_datalist.append(img_path)
-
+        label.append(train_anno_data[i])
+        if train_anno_data[i]["attributes"]["timeofday"] =="daytime":
+            img_path = fake_img_path + train_anno_data[i]["name"]
+            img_datalist.append(img_path)
+            label.append(train_anno_data[i])
+    save_json(label, new_anno_json, indent=4)
 
     val_anno_data = _load_json(val_anno_json)
 
@@ -50,8 +57,6 @@ if ds == "bdd100k":
 
     with open("datalists/bdd100k_train_images_path.txt", "wb") as fp:
         pickle.dump(img_datalist, fp)
-    with open("datalists/bdd100k_train_fake_images_path.txt", "wb") as fp:
-        pickle.dump(fake_img_datalist, fp)
     with open("datalists/bdd100k_val_images_path.txt", "wb") as fp:
         pickle.dump(val_datalist, fp)
 

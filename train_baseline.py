@@ -3,7 +3,6 @@ import pickle
 from cfg import *
 from datasets.bdd import *
 from imports import *
-#from model.train_model import Cycle_Model
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 if ds == "bdd100k":
@@ -12,18 +11,15 @@ if ds == "bdd100k":
     root_anno_path = os.path.join(bdd_path, "labels")
 
     train_img_path = root_img_path + "/train/"
-    #train_fake_img_path = root_img_path + "/fake_night_noTV_noRefine/"
     val_img_path = root_img_path + "/val/"
 
-    train_anno_json_path = root_anno_path + "/bdd100k_labels_images_train.json"
+    train_anno_json_path = root_anno_path + "/bdd100k_labels_images_fake_train.json" # fake json file
     val_anno_json_path = root_anno_path + "/bdd100k_labels_images_val.json"
 
     print("Loading files")
 
     with open("datalists/bdd100k_train_images_path.txt", "rb") as fp:
         train_img_path_list = pickle.load(fp)
-    #with open("datalists/bdd100k_train_fake_images_path.txt", "rb") as fp:
-    #    train_fake_img_path_list = pickle.load(fp)
     with open("datalists/bdd100k_val_images_path.txt", "rb") as fp:
         val_img_path_list = pickle.load(fp)
 
@@ -55,8 +51,6 @@ print("Loading done")
 
 def get_model(num_classes):
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
-    #,min_size=256, max_size=512)
-    #model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True, min_size=256, max_size=512, image_mean=[0.5,0.5,0.5], image_std=[0.5,0.5,0.5])
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCNNPredictor(
         in_features, num_classes

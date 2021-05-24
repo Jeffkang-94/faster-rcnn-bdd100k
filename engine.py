@@ -12,12 +12,10 @@ from coco_eval import CocoEvaluator
 from coco_utils import get_coco_api_from_dataset
 from imports import *
 
-from transforms import DomainTransfer
 from torchvision.utils import save_image
 
 writer = SummaryWriter()
 num_iters = 0
-DT_model = DomainTransfer()
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
     global num_iters
@@ -39,8 +37,6 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
         
     
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
-        
-        
 
         loss_dict = model(images, targets)
         
@@ -52,14 +48,6 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
         loss_dict_reduced = utils.reduce_dict(loss_dict)
         
         losses_reduced = sum(loss for loss in loss_dict_reduced.values())
-        for time in scene:
-            if time == 'daytime':
-                night_images = list((DT_model(image.unsqueeze(0)).squeeze(0) for image in images))
-                loss_night_dict = model(night_images, targets)
-                losses += sum(loss for loss in loss_night_dict.values())
-                loss_night_dict_reduced = utils.reduce_dict(loss_night_dict)
-                losses_reduced += sum(loss for loss in loss_night_dict_reduced.values())
-
         loss_value = losses_reduced.item()
 
         writer.add_scalar("Loss/train", loss_value, num_iters)
