@@ -5,7 +5,6 @@ from pathlib import Path
 import numpy as np
 import torchvision
 from PIL import Image
-#from torchvision import transforms
 from tqdm import tqdm
 import glob
 import torch
@@ -16,7 +15,7 @@ from torch.utils.data import Dataset
 from torchvision.utils import save_image
 import torchvision.transforms as tf
 from torchvision.datasets.folder import pil_loader
-def get_ground_truths(train_img_path_list,  anno_data, dt=False):
+def get_ground_truths(train_img_path_list,  anno_data):
 
     bboxes, total_bboxes = [], []
     labels, total_labels = [], []
@@ -77,12 +76,7 @@ def _load_json(path_list_idx):
 def get_transform(train):
     transforms = []
     transforms.append(T.ToTensor())
-    # 2.8125 height  y 
-    # 2.5 width  x
-    #if train:
-        # 720 , 1280
     transforms.append(T.resize((256,512)))
-
     if train:
         transforms.append(T.RandomHorizontalFlip(0.5))
     return T.Compose(transforms)
@@ -93,17 +87,11 @@ class BDD(torch.utils.data.Dataset):
         self, img_path, anno_json_path, transforms=None 
     ):  # total_bboxes_list,total_labels_list,transforms=None):
         super(BDD, self).__init__()
-        self.img_path = img_path # 이걸 day path로 변경
-        #self.train_img_path  = os.path.join('/mnt2/datasets/bdd100k', 'images/100k/train')
+        self.img_path = img_path 
         self.anno_data = _load_json(anno_json_path)
         self.total_bboxes_list, self.total_labels_list, self.total_img_path, self.total_times, self.count = get_ground_truths(
-            self.img_path,  self.anno_data, dt=True
+            self.img_path,  self.anno_data
         )
-        #self.anno_data = glob.glob('/mnt2/datasets/bdd100k/labels/train/*json')
-        #self.total_bboxes_list, self.total_labels_list, self.length = get_ground_truths_from_files(
-        #    self.train_img_path, self.anno_data
-        #)
-
         print("total dataset : {}".format(self.count))
         self.transforms = transforms
         self.classes = {
@@ -133,7 +121,6 @@ class BDD(torch.utils.data.Dataset):
 
         labels = self.total_labels_list[idx]
         bboxes = self.total_bboxes_list[idx]
-        scene = self.total_times[idx]
         area = (bboxes[:, 3] - bboxes[:, 1]) * (bboxes[:, 2] - bboxes[:, 0])
         
 
@@ -148,7 +135,5 @@ class BDD(torch.utils.data.Dataset):
 
         if self.transforms is not None:
             img, target = self.transforms(img, target)
-        #night_img = self.domain_transfer(img.unsqueeze(0)).squeeze(0)
-        #print(night_img.shape)
 
-        return img,  target, scene
+        return img,  target
