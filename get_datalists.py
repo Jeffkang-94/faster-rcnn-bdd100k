@@ -12,9 +12,9 @@ if ds == "bdd100k":
     root_img_path = os.path.join(bdd_path, "images", "100k")
     root_anno_path = os.path.join(bdd_path, "labels")
 
-    train_img_path = root_img_path + "/train/"
+    train_img_path = root_img_path + "/daytime/"
     val_img_path = root_img_path + "/val/"
-    fake_img_path = root_img_path +"/baseline/fake_night/"
+    fake_img_path = root_img_path +"/baseline_dsloss/fake_night/"
 
     train_anno_json = root_anno_path + "/bdd100k_labels_images_train.json"
     val_anno_json = root_anno_path + "/bdd100k_labels_images_val.json"
@@ -32,10 +32,11 @@ if ds == "bdd100k":
     label = []
    
     for i in tqdm(range(len(train_anno_data))):
-        img_path = train_img_path + train_anno_data[i]["name"]
-        img_datalist.append(img_path)
-        label.append(train_anno_data[i])
+        
         if train_anno_data[i]["attributes"]["timeofday"] =="daytime":
+            img_path = train_img_path + train_anno_data[i]["name"]
+            img_datalist.append(img_path)
+            label.append(train_anno_data[i])
             img_path = fake_img_path + train_anno_data[i]["name"]
             img_datalist.append(img_path)
             label.append(train_anno_data[i])

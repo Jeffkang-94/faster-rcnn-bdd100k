@@ -8,11 +8,9 @@ from imports import *
 from torchvision.utils import save_image
 batch_size = 1
 
-from transforms import DomainTransfer
-#DT_model = DomainTransfer()
 def get_model(num_classes):
-    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True).cuda()
-    #model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True, min_size=256, max_size=512, image_mean=[0.5,0.5,0.5], image_std=[0.5,0.5,0.5])
+    #model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True).cuda()
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True, min_size=256, max_size=512)#, image_mean=[0.5,0.5,0.5], image_std=[0.5,0.5,0.5])
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCNNPredictor(
         in_features, num_classes
@@ -64,7 +62,7 @@ def evaluate_(model, coco_dset, data_loader, device):
    
     #to_resize = torchvision.transforms.Resize((256,512))
     to_tensor = torchvision.transforms.ToTensor()
-    for image, targets, times in metric_logger.log_every(data_loader, 100, header):
+    for image, targets in metric_logger.log_every(data_loader, 100, header):
 
         #image = list(to_tensor(to_resize(img)).to(device) for img in image)
         image = list(img.to(device) for img in image)
@@ -107,7 +105,7 @@ device = torch.device("cuda")
 
 # num classes 10
 model_bdd = get_model(len(val_dataset_bdd.classes))
-checkpoint = torch.load("saved_models/" + "/day+noTV_fakenight/bdd100k_15.pth")
+checkpoint = torch.load("saved_models/" + "/bdd100k_5.pth")
 model_bdd.load_state_dict(checkpoint["model"])
 model_bdd.eval()
 

@@ -20,6 +20,7 @@ class Compose(object):
 class resize(object):
     def __init__(self, dim):
         self.dims = dim 
+        
 
     def __call__(self, image, target, return_percent_coords=True):
        
@@ -28,11 +29,11 @@ class resize(object):
         #new_image =image.resize
 
         # Resize bounding boxes
-        height, width = image.shape[-2:]
-        height /= self.dims[0]
-        width /= self.dims[1]
-        # x,y,x,y width,height
-        old_dims = torch.FloatTensor([width, height, width, height]).unsqueeze(0)
+        # width = 1280, height=720
+        #height, width = image.shape[-2:]
+        
+
+        old_dims = torch.FloatTensor([2.5, 2.8125, 2.5, 2.8125]).unsqueeze(0)
         new_boxes = target["boxes"] / old_dims  # percent coordinates
 
 

@@ -3,6 +3,8 @@ import pickle
 from cfg import *
 from datasets.bdd import *
 from imports import *
+from torchvision.models.detection.rpn import AnchorGenerator
+from torchvision.models.detection import FasterRCNN
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 if ds == "bdd100k":
@@ -50,7 +52,8 @@ print("Loading done")
 
 
 def get_model(num_classes):
-    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+    #model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True, min_size=256, max_size=512)
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCNNPredictor(
         in_features, num_classes

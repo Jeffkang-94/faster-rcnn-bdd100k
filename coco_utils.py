@@ -151,7 +151,7 @@ def convert_to_coco_api(ds):
     for img_idx in tqdm(range(len(ds))):
         # find better way to get target
         # targets = ds.get_annotations(img_idx)
-        img, targets,_ = ds[img_idx]
+        img, targets = ds[img_idx]
         #img = torchvision.transforms.ToTensor()(img)
         image_id = targets["image_id"].item()
         img_dict = {}
